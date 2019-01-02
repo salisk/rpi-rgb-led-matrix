@@ -213,5 +213,42 @@ struct HardwareMapping matrix_hardware_mappings[] = {
     .p0_b2         = GPIO_BIT(25),
   },
 
+  /*
+   * Odroid C2.
+   */
+  {
+    .name          = "odroidc2",
+
+    /* Odroid C2 uses 2 gpio registers
+     * GPIOX and GPIOX for the output
+     * GPIOY bits are set (21 + GPIOY_BIT)
+     * sometimes -4 
+     */
+    .output_enable = GPIO_BIT(10), // GPIOX_BIT10
+    .clock         = GPIO_BIT(19), // GPIOX_BIT19
+    .strobe        = GPIO_BIT(21), // GPIOX_BIT21
+
+    .a             = GPIO_BIT(9),  // GPIOX_BIT9
+    .b             = GPIO_BIT(8),  // GPIOX_BIT8
+    .c             = GPIO_BIT(5),  // GPIOX_BIT5
+    .d             = GPIO_BIT(3),  // GPIOX_BIT3
+
+    /* Parallel chain 0, RGB for both sub-panels */
+    .p0_r1         = GPIO_BIT(2),  // GPIOX_BIT2
+    .p0_g1         = GPIO_BIT(11), // GPIOX_BIT11
+    .p0_b1         = GPIO_BIT(31), // GPIOY_BIT14 (* -4)
+    .p0_r2         = GPIO_BIT(1),  // GPIOX_BIT1
+    .p0_g2         = GPIO_BIT(4),  // GPIOX_BIT4
+    .p0_b2         = GPIO_BIT(7),  // GPIOX_BIT7
+
+    /* Chain 1 */
+    .p1_r1         = GPIO_BIT(30), // GPIOY_BIT13 (* -4)
+    .p1_g1         = GPIO_BIT(0),  // GPIOX_BIT0
+    .p1_b1         = GPIO_BIT(29), // GPIOY_BIT8
+    .p1_r2         = GPIO_BIT(24), // GPIOY_BIT3
+    .p1_g2         = GPIO_BIT(6),  // GPIOX_BIT6
+    .p1_b2         = GPIO_BIT(28), // GPIOY_BIT7
+  },
+
   {0}
 };
