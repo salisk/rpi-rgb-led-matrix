@@ -17,8 +17,11 @@
 #define RPI_GPIO_H
 
 #include <stdint.h>
-
 #include <vector>
+
+#define REGISTER_X_MASK 0x3FF
+#define REGISTER_Y_MASK 0xFFFFFC00
+// #define CLEAR_MASK 0x3
 
 // Putting this in our namespace to not collide with other things called like
 // this.
@@ -54,19 +57,28 @@ class GPIO {
   // Set the bits that are '1' in the output. Leave the rest untouched.
   inline void SetBits(uint32_t value) {
     if (!value) return;
-    *gpio_set_bits_ = value;
+
+    // process bits for the GPIOY register
+    if (value & REGISTER_Y_MASK) {
+      unsigned value_y = value >> 22;
+      // get the special bits
+      value_y |= (value >> 30) << 13;
+      *gpioy_bits_ = value_y;
+    }
+
+    // process bits for the GPIOX register
+    *gpiox_bits_ = value & REGISTER_X_MASK;
+
+    // slowdown
     for (int i = 0; i < slowdown_; ++i) {
-      *gpio_set_bits_ = value;
+      *gpiox_bits_ = value & REGISTER_X_MASK;
     }
   }
 
   // Clear the bits that are '1' in the output. Leave the rest untouched.
   inline void ClearBits(uint32_t value) {
     if (!value) return;
-    *gpio_clr_bits_ = value;
-    for (int i = 0; i < slowdown_; ++i) {
-      *gpio_clr_bits_ = value;
-    }
+    SetBits(~value);
   }
 
   // Write all the bits of "value" mentioned in "mask". Leave the rest untouched.
@@ -78,16 +90,17 @@ class GPIO {
   }
 
   inline void Write(uint32_t value) { WriteMaskedBits(value, output_bits_); }
-  inline uint32_t Read() const { return *gpio_read_bits_ & input_bits_; }
+  inline uint32_t Read() const { return 0; }
 
  private:
   uint32_t output_bits_;
   uint32_t input_bits_;
   uint32_t reserved_bits_;
   int slowdown_;
-  volatile uint32_t *gpio_set_bits_;
-  volatile uint32_t *gpio_clr_bits_;
-  volatile uint32_t *gpio_read_bits_;
+  volatile uint32_t *gpiox_bits_;
+  volatile uint32_t *gpioy_bits_;
+  volatile uint32_t *gpiox_read_bits_;
+  volatile uint32_t *gpioy_read_bits_;
 };
 
 // A PinPulser is a utility class that pulses a GPIO pin. There can be various
