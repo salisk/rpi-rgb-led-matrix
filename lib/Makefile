@@ -24,7 +24,7 @@ TARGET=librgbmatrix
 #   regular-pi1        # If you have an old Pi1 and regular didn't work.
 #   classic            # (deprecated) Classic Pi1/2/. Not used anymore.
 #   classic-pi1        # (deprecated) Classic pinout on Rasperry Pi 1
-HARDWARE_DESC?=regular
+HARDWARE_DESC?=odroidc2
 
 ###
 # After you change any of the following DEFINES, make sure to 'make' again.
@@ -94,7 +94,7 @@ HARDWARE_DESC?=regular
 # the image will have visible brightness glitches; but for debugging, this is
 # a good choice.
 # Flag: --led-no-hardware-pulses
-#DEFINES+=-DDISABLE_HARDWARE_PULSES
+DEFINES+=-DDISABLE_HARDWARE_PULSES
 
 # If defined, remove deprecated transformers from the API.
 # This will eventually be enabled by default and at some point the code

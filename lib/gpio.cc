@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -9,6 +10,7 @@
 #include <asm/ioctl.h>
 #include <sys/mman.h>
 #include <sys/utsname.h>
+#include <time.h>
 #include "gpio.h"
 
 /*
