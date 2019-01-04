@@ -9,6 +9,7 @@
 #include <asm/ioctl.h>
 #include <sys/mman.h>
 #include <sys/utsname.h>
+#include "gpio.h"
 
 /*
  * nanosleep() takes longer than requested because of OS jitter.
@@ -74,6 +75,7 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 static volatile uint32_t *s_GPIO_registers = NULL;
+static volatile uint32_t *s_Timer1Mhz = NULL;
 
 namespace rgb_matrix {
 /*static*/ const uint32_t GPIO::kValidBits
@@ -83,12 +85,13 @@ namespace rgb_matrix {
    (1 << 28) | (1 << 29) | (1 << 30) | (1 << 31)
 );
 
-GPIO::GPIO() : output_bits_(0), slowdown_(1), gpio_port_(NULL) {
+GPIO::GPIO() : output_bits_(0), input_bits_(0), reserved_bits_(0),
+               slowdown_(1) {
 }
 
 uint32_t GPIO::InitOutputs(uint32_t outputs,
                            bool adafruit_pwm_transition_hack_needed) {
-  if (gpio_port_ == NULL) {
+  if (s_GPIO_registers == NULL) {
     fprintf(stderr, "Attempt to init outputs but not yet Init()-ialized.\n");
     return 0;
   }
@@ -99,23 +102,23 @@ uint32_t GPIO::InitOutputs(uint32_t outputs,
   // set GPIOX register gpio to output 
   for (uint32_t b = 0; b <= 21; ++b) {
     if (outputs & (1 << b)) {
-		*(gpio_port_ + C2_GPIOX_FSEL_REG_OFFSET) = (*(gpio_port_ + C2_GPIOX_FSEL_REG_OFFSET) & ~(1 << b));
+		*(s_GPIO_registers + C2_GPIOX_FSEL_REG_OFFSET) = (*(s_GPIO_registers + C2_GPIOX_FSEL_REG_OFFSET) & ~(1 << b));
     }
   }
 
   // set GPIOY register gpio to output
-  for (uint32_t b = 0, b < 9; ++b) {
+  for (uint32_t b = 0; b < 9; ++b) {
 	  if (outputs & (1 << (b + 21))) {
-		*(gpio_port_ + C2_GPIOY_FSEL_REG_OFFSET) = (*(gpio_port_ + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << b));
+		*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) = (*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << b));
 	  }
   }
 
   // set two last special cases
   if (outputs & (1 << 30))
-	*(gpio_port_ + C2_GPIOY_FSEL_REG_OFFSET) = (*(gpio_port_ + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << 13));
+	*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) = (*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << 13));
 
   if (outputs & (1 << 31))
-	*(gpio_port_ + C2_GPIOY_FSEL_REG_OFFSET) = (*(gpio_port_ + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << 14));
+	*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) = (*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << 14));
 	
   return output_bits_;
 }
@@ -183,7 +186,7 @@ static uint32_t *init_gpio_mmap (off_t register_offset)
                      register_offset
                      );
 
-	if ((int32_t)gpio == -1) {
+	if (result == (void *)-1) {
 		perror("mmap error: ");
     return NULL;
   }
@@ -276,11 +279,18 @@ static uint32_t JitterAllowanceMicroseconds() {
   return allowance_us;
 }
 
+void sleep_nanos_(long nanos) {
+  if (nanos < 20) return;
+  // The following loop is determined empirically on a 900Mhz RPi 2
+  for (uint32_t i = (nanos - 20) * 100 / 110; i != 0; --i) {
+    asm("");
+  }
+}
+
 bool Timers::Init() {
   if (!mmap_all_bcm_registers_once())
     return false;
 
-  busy_sleep_impl = sleep_nanos;
   DisableRealtimeThrottling();
   
   return true;
@@ -315,27 +325,17 @@ void Timers::sleep_nanos(long nanos) {
     }
   }
 
-  busy_sleep_impl(nanos);
+  sleep_nanos_(nanos);
 }
-
-static void sleep_nanos(long nanos) {
-  if (nanos < 20) return;
-  // The following loop is determined empirically on a 900Mhz RPi 2
-  for (uint32_t i = (nanos - 20) * 100 / 110; i != 0; --i) {
-    asm("");
-  }
-}
+} // nameless namespace
 
 // Public PinPulser factory
 PinPulser *PinPulser::Create(GPIO *io, uint32_t gpio_mask,
                              bool allow_hardware_pulsing,
                              const std::vector<int> &nano_wait_spec) {
   if (!Timers::Init()) return NULL;
-  if (allow_hardware_pulsing && HardwarePinPulser::CanHandle(gpio_mask)) {
-    return new HardwarePinPulser(gpio_mask, nano_wait_spec);
-  } else {
-    return new TimerBasedPinPulser(io, gpio_mask, nano_wait_spec);
-  }
+    
+  return new TimerBasedPinPulser(io, gpio_mask, nano_wait_spec);
 }
 
 uint32_t GetMicrosecondCounter() {

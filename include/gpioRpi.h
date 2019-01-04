@@ -17,7 +17,6 @@
 #define RPI_GPIO_H
 
 #include <stdint.h>
-
 #include <vector>
 
 // Putting this in our namespace to not collide with other things called like
