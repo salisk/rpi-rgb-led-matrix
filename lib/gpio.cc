@@ -275,11 +275,14 @@ void Timers::sleep_nanos(long nanos) {
   // busy wait.
   static long kJitterAllowanceNanos = JitterAllowanceMicroseconds() * 1000;
   if (nanos > kJitterAllowanceNanos + 5000) {
-    const uint32_t before = GetMicrosecondCounter();
+    struct timespec ts;
+    clock_gettime (CLOCK_MONOTONIC_RAW, &ts);
+    const uint32_t before = (uint32_t) ts.tv_nsec;
     struct timespec sleep_time
       = { 0, nanos - kJitterAllowanceNanos };
     nanosleep(&sleep_time, NULL);
-    const uint32_t after = GetMicrosecondCounter();
+      clock_gettime (CLOCK_MONOTONIC_RAW, &ts);
+    const uint32_t after = (uint32_t) ts.tv_nsec;
     const long nanoseconds_passed = 1000 * (uint32_t)(after - before);
     if (nanoseconds_passed > nanos) {
       return;  // darn, missed it.
@@ -302,11 +305,11 @@ PinPulser *PinPulser::Create(GPIO *io, uint32_t gpio_mask,
 }
 
 uint32_t GetMicrosecondCounter() {
-  struct timespec t;
+  struct timespec ts;
   
   clock_gettime (CLOCK_MONOTONIC_RAW, &ts);
 
-  return (uint32_t)t.tv_nsec;
+  return (uint32_t)ts.tv_nsec;
 }
 
 } // namespace rgb_matrix
