@@ -68,7 +68,7 @@
 // #define C2_GPIOY_PUPD_REG_OFFSET	0x13B
 // #define C2_GPIOY_PUEN_REG_OFFSET	0x149
 
-#define TIMER_A_OFFSET 0xC1109988
+// #define TIMER_A_OFFSET 0xC1100000
 
 /*----------------------------------------------------------------------------*/
 #define	PAGE_SIZE	(4*1024)
@@ -77,7 +77,7 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 static volatile uint32_t *s_GPIO_registers = NULL;
-static volatile uint32_t *s_Timer1Mhz = NULL;
+// static volatile uint32_t *s_Timer1Mhz = NULL;
 
 namespace rgb_matrix {
 /*static*/ const uint32_t GPIO::kValidBits
@@ -124,38 +124,6 @@ uint32_t GPIO::InitOutputs(uint32_t outputs,
 	
   return output_bits_;
 }
-
-// /*----------------------------------------------------------------------------*/
-// //
-// // offset to the GPIO Set regsiter
-// //
-// /*----------------------------------------------------------------------------*/
-// static int gpioToGPSETReg (int pin)
-// {
-// 	if (pin >= C2_GPIOX_PIN_START && pin <= C2_GPIOX_PIN_END)
-// 		return  C2_GPIOX_OUTP_REG_OFFSET;
-// 	if (pin >= C2_GPIOY_PIN_START && pin <= C2_GPIOY_PIN_END)
-// 		return  C2_GPIOY_OUTP_REG_OFFSET;
-// 	if (pin >= C2_GPIODV_PIN_START && pin <= C2_GPIODV_PIN_END)
-// 		return  C2_GPIODV_OUTP_REG_OFFSET;
-// 	return	-1;
-// }
-
-// /*----------------------------------------------------------------------------*/
-// //
-// // offset to the GPIO bit
-// //
-// /*----------------------------------------------------------------------------*/
-// static int gpioToShiftReg (int pin)
-// {
-// 	if (pin >= C2_GPIOX_PIN_START && pin <= C2_GPIOX_PIN_END)
-// 		return  pin - C2_GPIOX_PIN_START;
-// 	if (pin >= C2_GPIOY_PIN_START && pin <= C2_GPIOY_PIN_END)
-// 		return  pin - C2_GPIOY_PIN_START;
-// 	if (pin >= C2_GPIODV_PIN_START && pin <= C2_GPIODV_PIN_END)
-// 		return  pin - C2_GPIODV_PIN_START;
-// 	return	-1;
-// }
 
 /*----------------------------------------------------------------------------*/
 static uint32_t *init_gpio_mmap (off_t register_offset)
@@ -204,13 +172,6 @@ static bool mmap_all_bcm_registers_once() {
   if (s_GPIO_registers == NULL) {
     return false;
   }
-
-  // Time measurement.
-  uint32_t *timereg = init_gpio_mmap(TIMER_A_OFFSET);
-  if (timereg == NULL) {
-    return false;
-  }
-  s_Timer1Mhz = timereg;
 
 //   // Hardware pin-pulser.
 //   s_PWM_registers  = mmap_bcm_register(isPI2, GPIO_PWM_BASE_OFFSET);
@@ -314,11 +275,11 @@ void Timers::sleep_nanos(long nanos) {
   // busy wait.
   static long kJitterAllowanceNanos = JitterAllowanceMicroseconds() * 1000;
   if (nanos > kJitterAllowanceNanos + 5000) {
-    const uint32_t before = *s_Timer1Mhz;
+    const uint32_t before = GetMicrosecondCounter();
     struct timespec sleep_time
       = { 0, nanos - kJitterAllowanceNanos };
     nanosleep(&sleep_time, NULL);
-    const uint32_t after = *s_Timer1Mhz;
+    const uint32_t after = GetMicrosecondCounter();
     const long nanoseconds_passed = 1000 * (uint32_t)(after - before);
     if (nanoseconds_passed > nanos) {
       return;  // darn, missed it.
@@ -341,7 +302,11 @@ PinPulser *PinPulser::Create(GPIO *io, uint32_t gpio_mask,
 }
 
 uint32_t GetMicrosecondCounter() {
-  return s_Timer1Mhz ? *s_Timer1Mhz : 0;
+  struct timespec t;
+  
+  clock_gettime (CLOCK_MONOTONIC_RAW, &ts);
+
+  return (uint32_t)t.tv_nsec;
 }
 
 } // namespace rgb_matrix
