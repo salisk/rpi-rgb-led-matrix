@@ -19,8 +19,8 @@
 #include <stdint.h>
 #include <vector>
 
-#define REGISTER_X_MASK 0x3FF
-#define REGISTER_Y_MASK 0xFFFFFC00
+#define REGISTER_X_MASK 0x3FFFFF
+#define REGISTER_Y_MASK 0xFF800000
 // #define CLEAR_MASK 0x3
 
 // Putting this in our namespace to not collide with other things called like
@@ -57,28 +57,34 @@ class GPIO {
   // Set the bits that are '1' in the output. Leave the rest untouched.
   inline void SetBits(uint32_t value) {
     if (!value) return;
-
-    // process bits for the GPIOY register
-    if (value & REGISTER_Y_MASK) {
+  UpdateBits(value | saved_bits_);    
+// process bits for the GPIOY register
+  /*  if (value & REGISTER_Y_MASK) {
       unsigned value_y = value >> 22;
       // get the special bits
       value_y |= (value >> 30) << 13;
       *gpioy_bits_ = value_y;
     }
-
+*/
     // process bits for the GPIOX register
-    *gpiox_bits_ = value & REGISTER_X_MASK;
-
     // slowdown
-    for (int i = 0; i < slowdown_; ++i) {
-      *gpiox_bits_ = value & REGISTER_X_MASK;
-    }
+    //for (int i = 0; i < slowdown_; ++i) {
+    //  *gpiox_bits_ = value & REGISTER_X_MASK;
+    //}
   }
+
+  inline void UpdateBits(uint32_t value) { 
+    *gpiox_bits_ = value;//& REGISTER_X_MASK;
+    saved_bits_ = value;
+    for (int i = 0; i < slowdown_; i++) {
+      *gpiox_bits_ = value;  
+}
+}
 
   // Clear the bits that are '1' in the output. Leave the rest untouched.
   inline void ClearBits(uint32_t value) {
     if (!value) return;
-    SetBits(~value);
+    UpdateBits(~value & saved_bits_);
   }
 
   // Write all the bits of "value" mentioned in "mask". Leave the rest untouched.
@@ -96,6 +102,7 @@ class GPIO {
   uint32_t output_bits_;
   uint32_t input_bits_;
   uint32_t reserved_bits_;
+  uint32_t saved_bits_;
   int slowdown_;
   volatile uint32_t *gpiox_bits_;
   volatile uint32_t *gpioy_bits_;
