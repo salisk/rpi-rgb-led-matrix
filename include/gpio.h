@@ -58,26 +58,23 @@ class GPIO {
   inline void SetBits(uint32_t value) {
     if (!value) return;
   UpdateBits(value | saved_bits_);    
-// process bits for the GPIOY register
-  /*  if (value & REGISTER_Y_MASK) {
+  }
+
+  inline void UpdateBits(uint32_t value) { 
+    // cache the bits
+    saved_bits_ = value;
+    // process bits for the GPIOY register
+    if (value & REGISTER_Y_MASK) {
       unsigned value_y = value >> 22;
       // get the special bits
       value_y |= (value >> 30) << 13;
       *gpioy_bits_ = value_y;
     }
-*/
-    // process bits for the GPIOX register
-    // slowdown
-    //for (int i = 0; i < slowdown_; ++i) {
-    //  *gpiox_bits_ = value & REGISTER_X_MASK;
-    //}
-  }
 
-  inline void UpdateBits(uint32_t value) { 
-    *gpiox_bits_ = value;//& REGISTER_X_MASK;
-    saved_bits_ = value;
+    // process bits for the GPIOX register
+    *gpiox_bits_ = value & REGISTER_X_MASK;
     for (int i = 0; i < slowdown_; i++) {
-      *gpiox_bits_ = value;  
+      *gpiox_bits_ = value & REGISTER_X_MASK;  
 }
 }
 
