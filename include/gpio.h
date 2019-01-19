@@ -20,7 +20,7 @@
 #include <vector>
 
 #define REGISTER_X_MASK 0x3FFFFF
-#define REGISTER_Y_MASK 0xFF800000
+#define REGISTER_Y_MASK 0xFFC00000
 // #define CLEAR_MASK 0x3
 
 // Putting this in our namespace to not collide with other things called like
@@ -64,12 +64,22 @@ class GPIO {
     // cache the bits
     saved_bits_ = value;
     // process bits for the GPIOY register
-    if (value & REGISTER_Y_MASK) {
-      unsigned value_y = value >> 22;
+    if ((value & REGISTER_Y_MASK) != 0) {
+      unsigned value_y = (value >> 22) & 0x3FF;
       // get the special bits
-      value_y |= (value >> 30) << 13;
       *gpioy_bits_ = value_y;
+      if (value >> 30 == 1)
+        *(gpioy_bits_) |= (1 << 13);
+      else
+        *(gpioy_bits_) &= ~(1 << 13);
+     
+      if (value >> 31 == 1)
+        *(gpioy_bits_) |= (1 << 14);
+      else
+        *(gpioy_bits_) &= ~(1 << 14);
     }
+
+    //*gpioy_bits_ = 0x0;
 
     // process bits for the GPIOX register
     *gpiox_bits_ = value & REGISTER_X_MASK;

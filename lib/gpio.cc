@@ -109,18 +109,17 @@ uint32_t GPIO::InitOutputs(uint32_t outputs,
   }
 
   // set GPIOY register gpio to output
-  for (uint32_t b = 0; b < 9; ++b) {
-	  if (outputs & (1 << (b + 21))) {
+  for (uint32_t b = 0; b < 16; ++b) {
 		*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) = (*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << b));
-	  }
+	  
   }
 
   // set two last special cases
-  if (outputs & (1 << 30))
-	*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) = (*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << 13));
+//  if (outputs & (1 << 30))
+	//*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) = (*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << 13));
 
-  if (outputs & (1 << 31))
-	*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) = (*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << 14));
+  //if (outputs & (1 << 31))
+	//*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) = (*(s_GPIO_registers + C2_GPIOY_FSEL_REG_OFFSET) & ~(1 << 14));
 	
   return output_bits_;
 }
